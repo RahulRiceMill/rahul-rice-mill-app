@@ -1,0 +1,14 @@
+{
+  "name": "Rahul Rice Mill",
+  "short_name": "Rahul Mill",
+  "description": "Rates and cost calculator for Rahul Rice Mill, Barbardiya, Bardiya",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f8f6",
+  "theme_color": "#1d3a2a",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

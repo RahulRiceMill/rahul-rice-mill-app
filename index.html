@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rahul Rice Mill</title>
+<meta name="theme-color" content="#1d3a2a">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root { --paddy:#1d3a2a; --grain:#e0a526; --ink:#17231c; --line:#d9e0d9; --muted:#5d6b62; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color:var(--ink); background:#f6f8f6; line-height:1.5; font-size:17px; }
+  .wrap { max-width:520px; margin:0 auto; }
+  .top { background:var(--paddy); color:#fff; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; }
+  .top strong { font-size:1.1rem; }
+  .lang button { background:none; border:1px solid #2c5440; color:#fff; padding:4px 12px; font:inherit; font-size:.9rem; cursor:pointer; }
+  .lang button:first-child { border-radius:999px 0 0 999px; }
+  .lang button:last-child { border-radius:0 999px 999px 0; }
+  .lang button[aria-pressed="true"] { background:var(--grain); color:var(--ink); font-weight:600; }
+  .front { width:100%; height:210px; object-fit:cover; display:block; background:#ccd5cc; }
+  .box { background:#fff; margin:14px; padding:16px; border:1px solid var(--line); border-radius:8px; }
+  h1 { font-size:1.35rem; margin:0 0 2px; color:var(--paddy); }
+  .sub { color:var(--muted); margin:0; font-size:.95rem; }
+  label { font-weight:700; display:block; margin-bottom:6px; }
+  #kg { width:100%; font-size:1.5rem; padding:12px; border:2px solid var(--paddy); border-radius:6px; }
+  .row { display:flex; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid var(--line); }
+  .row:last-child { border-bottom:0; }
+  .name { font-weight:600; }
+  .rate { color:var(--muted); font-size:.9rem; }
+  .cost { font-weight:800; font-size:1.15rem; color:var(--paddy); text-align:right; white-space:nowrap; }
+  .note { color:var(--muted); font-size:.88rem; margin:10px 0 0; }
+  #install { display:none; width:calc(100% - 28px); margin:0 14px 14px; background:var(--grain); color:var(--ink); border:0; padding:13px; font:inherit; font-weight:700; border-radius:6px; cursor:pointer; }
+  :focus-visible { outline:3px solid var(--grain); outline-offset:2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <strong id="tName"></strong>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" data-lang="en" aria-pressed="true">EN</button>
+      <button type="button" data-lang="ne" aria-pressed="false">नेपाली</button>
+    </div>
+  </div>
+
+  <img class="front" src="mill.jpeg" alt="Rahul Rice Mill building">
+
+  <div class="box">
+    <h1 id="tTitle"></h1>
+    <p class="sub" id="tSub"></p>
+  </div>
+
+  <div class="box">
+    <label for="kg" id="tKgLabel"></label>
+    <input type="number" id="kg" min="0" step="any" inputmode="decimal" placeholder="0">
+  </div>
+
+  <div class="box">
+    <div id="list"></div>
+    <p class="note" id="tNote"></p>
+  </div>
+
+  <button id="install" type="button"></button>
+</div>
+
+<script>
+/* ===== EDIT THE RATES HERE (the only place in the app) ===== */
+var EFFECTIVE = "2083/04/21";
+// rate = Rs per unit; per = kg in that unit (quintal = 100 kg, kg = 1)
+var RATES = [
+  { en: "Milling - Sailer",              ne: "कुटानी - सेलर",          rate: 130, per: 100 },
+  { en: "Milling - Huller",              ne: "कुटानी - हलर",           rate: 140, per: 100 },
+  { en: "Grinding - Wheat and rice",     ne: "पिसानी - गहुँ र चामल",    rate: 6,   per: 1 },
+  { en: "Grinding - Maize and paddy",    ne: "पिसानी - मकै र धान",      rate: 7,   per: 1 },
+  { en: "Grinding - Maize flour",        ne: "पिसानी - मकैको पिठो",     rate: 8,   per: 1 },
+  { en: "Grinding - Turmeric and spices",ne: "पिसानी - बेसार र मसला",   rate: 35,  per: 1 },
+  { en: "Oil pressing - Mustard seed",   ne: "पेलानी - तोरी",           rate: 20,  per: 1 }
+];
+
+var TEXT = {
+  en: { name: "Rahul Rice Mill", title: "Rahul Rice Mill", sub: "Barbardiya-9, Bardiya", kg: "Enter weight in kg",
+        perQ: "per quintal", perK: "per kg", rs: "Rs ",
+        note: "Estimate using posted rates (1 quintal = 100 kg). Rates effective from ", install: "Install this app" },
+  ne: { name: "राहुल राइस मिल", title: "राहुल राइस मिल", sub: "बारबर्दिया-९, बर्दिया", kg: "केजीमा तौल हाल्नुहोस्",
+        perQ: "प्रति कुन्टल", perK: "प्रति केजी", rs: "रु. ",
+        note: "पोस्ट गरिएको दरमा आधारित अनुमान (१ कुन्टल = १०० केजी)। लागू मिति: ", install: "यो एप इन्स्टल गर्नुहोस्" }
+};
+
+var lang = "en";
+var $ = function (id) { return document.getElementById(id); };
+function num(s) {
+  s = String(s);
+  return lang === "ne" ? s.replace(/\d/g, function (d) { return "०१२३४५६७८९"[d]; }) : s;
+}
+
+function render() {
+  var t = TEXT[lang];
+  document.documentElement.lang = lang;
+  $("tName").textContent = t.name;
+  $("tTitle").textContent = t.title;
+  $("tSub").textContent = t.sub;
+  $("tKgLabel").textContent = t.kg;
+  $("tNote").textContent = t.note + num(EFFECTIVE);
+  $("install").textContent = t.install;
+
+  var kg = parseFloat($("kg").value);
+  var html = "";
+  RATES.forEach(function (r) {
+    var unit = r.per === 100 ? t.perQ : t.perK;
+    var cost = "—";
+    if (kg > 0) {
+      var total = Math.round(kg / r.per * r.rate * 100) / 100;
+      cost = t.rs + num(total.toLocaleString("en-IN"));
+    }
+    html += '<div class="row"><div><div class="name">' + r[lang] + '</div><div class="rate">' +
+            t.rs + num(r.rate) + " " + unit + '</div></div><div class="cost">' + cost + "</div></div>";
+  });
+  $("list").innerHTML = html;
+
+  document.querySelectorAll(".lang button").forEach(function (b) {
+    b.setAttribute("aria-pressed", b.dataset.lang === lang);
+  });
+}
+
+document.querySelectorAll(".lang button").forEach(function (b) {
+  b.addEventListener("click", function () { lang = b.dataset.lang; render(); });
+});
+$("kg").addEventListener("input", render);
+render();
+
+/* Install button (Android Chrome) */
+var deferred;
+window.addEventListener("beforeinstallprompt", function (e) {
+  e.preventDefault(); deferred = e; $("install").style.display = "block";
+});
+$("install").addEventListener("click", function () {
+  if (!deferred) return;
+  deferred.prompt(); deferred = null; $("install").style.display = "none";
+});
+
+/* Offline support */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
+}
+</script>
+</body>
+</html>
